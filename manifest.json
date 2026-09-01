@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "k-kit.chrome-close-confirmation",
+  "name": "Chrome Close Confirmation",
+  "version": "1.0.0",
+  "author": "K-Kit",
+  "description": "Adds a confirmation dialog before closing Chrome windows in Omarchy.",
+  "kinds": [
+    "overlay"
+  ],
+  "entryPoints": {
+    "overlay": "Plugin.qml"
+  }
+}
