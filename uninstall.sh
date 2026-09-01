@@ -6,17 +6,22 @@ readonly bindings_file="${OMARCHY_BINDINGS_FILE:-${XDG_CONFIG_HOME:-$HOME/.confi
 readonly bin_dir="${OMARCHY_BIN_DIR:-$HOME/.local/bin}"
 readonly helper_file="$bin_dir/omarchy-close-window"
 readonly hyprctl_bin="${HYPRCTL_BIN:-hyprctl}"
+readonly plugin_remove_bin="${OMARCHY_PLUGIN_REMOVE_BIN:-omarchy-plugin-remove}"
+readonly plugin_id="k-kit.chrome-close-confirmation"
 readonly marker_start="-- omarchy-chrome-close-confirmation:start"
 readonly marker_end="-- omarchy-chrome-close-confirmation:end"
 
-if ! command -v "$hyprctl_bin" >/dev/null 2>&1; then
-  printf 'Missing required command: %s\n' "$hyprctl_bin" >&2
-  exit 1
-fi
+for command in "$hyprctl_bin" "$plugin_remove_bin"; do
+  if ! command -v "$command" >/dev/null 2>&1; then
+    printf 'Missing required command: %s\n' "$command" >&2
+    exit 1
+  fi
+done
 
 if [[ ! -f "$bindings_file" ]]; then
   rm -f -- "$helper_file"
-  printf 'Chrome close confirmation is not installed.\n'
+  "$plugin_remove_bin" "$plugin_id" --yes
+  printf 'Uninstalled Chrome close confirmation.\n'
   exit 0
 fi
 
@@ -29,7 +34,8 @@ fi
 
 if [[ "$start_count" -eq 0 ]]; then
   rm -f -- "$helper_file"
-  printf 'Chrome close confirmation is not installed.\n'
+  "$plugin_remove_bin" "$plugin_id" --yes
+  printf 'Uninstalled Chrome close confirmation.\n'
   exit 0
 fi
 
@@ -59,6 +65,7 @@ if [[ -n "$config_errors" ]]; then
 fi
 
 rm -f -- "$helper_file"
+"$plugin_remove_bin" "$plugin_id" --yes
 
 printf 'Uninstalled Chrome close confirmation.\n'
 printf 'Backup: %s\n' "$backup_file"

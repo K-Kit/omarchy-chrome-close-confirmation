@@ -1,8 +1,8 @@
 # Chrome Close Confirmation for Omarchy
 
-Add a confirmation dialog before `SUPER + W` closes Google Chrome on
-[Omarchy](https://omarchy.org/). Every other application keeps the normal,
-instant close behavior.
+Add a native Omarchy Shell confirmation overlay before `SUPER + W` closes
+Google Chrome on [Omarchy](https://omarchy.org/). Every other application
+keeps the normal, instant close behavior.
 
 ## Motivation
 
@@ -12,15 +12,17 @@ entire Chrome window when I only meant to close a tab. This confirmation adds
 one deliberate checkpoint before a whole window—and all of its tabs—disappears.
 
 > [!NOTE]
-> This is a user-level Hyprland customization, not an Omarchy Shell widget.
-> Window closing is handled by Hyprland, so the repository installs a small
-> helper and overrides Omarchy's existing close-window binding.
+> This is a hybrid Omarchy plugin. The shell plugin renders the confirmation
+> overlay, while a small Hyprland helper intercepts the close-window binding.
+> Both pieces are required because shell overlays cannot intercept compositor
+> keybindings by themselves.
 
 ## What it does
 
 - Detects the currently focused window through `hyprctl`.
-- Shows a native Zenity confirmation for Chrome and Chromium window classes.
+- Shows a theme-aware Omarchy Shell overlay for Chrome and Chromium windows.
 - Uses **Keep Open** as the safe default.
+- Falls back to Zenity if the running shell cannot serve the overlay.
 - Closes non-Chrome windows immediately.
 - Preserves your existing `bindings.lua` and creates timestamped backups.
 - Installs entirely under your home directory; no `sudo` required.
@@ -28,11 +30,12 @@ one deliberate checkpoint before a whole window—and all of its tabs—disappea
 ## Requirements
 
 - Omarchy with its Lua-based Hyprland configuration
+- Omarchy Shell with third-party plugin support
 - `hyprctl`
 - `jq`
-- `zenity`
+- `zenity` for the safe fallback dialog
 
-On Omarchy, install missing dependencies with:
+Install missing fallback dependencies with:
 
 ```bash
 omarchy pkg add jq zenity
@@ -41,12 +44,14 @@ omarchy pkg add jq zenity
 ## Install
 
 ```bash
-git clone https://github.com/K-Kit/omarchy-chrome-close-confirmation.git
-cd omarchy-chrome-close-confirmation
-./install.sh
+omarchy plugin add \
+  https://github.com/K-Kit/omarchy-chrome-close-confirmation.git \
+  --enable
+~/.config/omarchy/plugins/k-kit.chrome-close-confirmation/install.sh
 ```
 
-The installer:
+The first command validates, installs, and enables the QML overlay through
+Omarchy's plugin manager. The helper installer then:
 
 1. Copies `bin/omarchy-close-window` to `~/.local/bin/`.
 2. Adds a clearly marked override to `~/.config/hypr/bindings.lua`.
@@ -54,7 +59,8 @@ The installer:
 4. Restores the previous configuration automatically if validation fails.
 
 Re-running `./install.sh` updates the helper and replaces the existing managed
-binding block without creating duplicates.
+binding block without creating duplicates. It refuses to change Hyprland
+unless the enabled overlay answers its readiness check.
 
 ## Usage
 
@@ -70,15 +76,16 @@ Chrome window before closing it.
 
 ## Uninstall
 
-From the cloned repository:
+Run the installed plugin's uninstaller:
 
 ```bash
-./uninstall.sh
+~/.config/omarchy/plugins/k-kit.chrome-close-confirmation/uninstall.sh
 ```
 
 The uninstaller removes only this project's marked binding block and installed
-helper. It leaves the rest of your Hyprland configuration untouched and
-creates a timestamped backup before editing.
+helper, then removes the plugin through `omarchy plugin remove`. It leaves the
+rest of your Hyprland configuration untouched and creates a timestamped backup
+before editing.
 
 ## Troubleshooting
 
@@ -100,7 +107,16 @@ hyprctl configerrors
 
 ### The dialog does not appear
 
-Verify Zenity is installed:
+Confirm the plugin is enabled and responding:
+
+```bash
+omarchy plugin list --json |
+  jq '.[] | select(.id == "k-kit.chrome-close-confirmation")'
+omarchy-shell shell call k-kit.chrome-close-confirmation ping ''
+```
+
+The second command must print `ready`. If the shell overlay is unavailable,
+the helper uses Zenity instead:
 
 ```bash
 zenity --version
@@ -148,8 +164,15 @@ hl.unbind("SUPER + W")
 o.bind("SUPER + W", "Close window", "omarchy-close-window")
 ```
 
-The helper reads the active window as JSON, prompts only when its class matches
-Chrome, and closes through Omarchy's current Lua dispatcher API:
+The helper reads the active window as JSON and checks the keep-loaded overlay
+through shell IPC. For Chrome and Chromium it creates a private FIFO, sends its
+path and the active window title to `Plugin.qml`, and waits for exactly one
+`close` or `keep-open` response. The shell overlay uses Omarchy's shared
+button, border, color, spacing, and focus primitives.
+
+If the overlay is unavailable, the helper presents the existing safe-default
+Zenity dialog. A confirmed response closes through Omarchy's current Lua
+dispatcher API:
 
 ```bash
 hyprctl dispatch "hl.dsp.window.close()"

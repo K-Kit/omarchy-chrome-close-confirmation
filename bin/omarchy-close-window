@@ -2,6 +2,69 @@
 
 set -euo pipefail
 
+readonly plugin_id="k-kit.chrome-close-confirmation"
+readonly omarchy_shell_bin="${OMARCHY_SHELL_BIN:-omarchy-shell}"
+
+request_dir=""
+cleanup() {
+  if [[ -n "$request_dir" ]]; then
+    rm -rf -- "$request_dir"
+  fi
+}
+trap cleanup EXIT
+
+confirm_with_overlay() {
+  local window_title="$1"
+  local ping_result
+  local response
+  local response_fd
+  local response_fifo
+  local summon_result
+  local payload
+
+  command -v "$omarchy_shell_bin" >/dev/null 2>&1 || return 2
+
+  ping_result="$(
+    "$omarchy_shell_bin" shell call "$plugin_id" ping "" 2>/dev/null
+  )" || return 2
+  [[ "$ping_result" == ready ]] || return 2
+
+  request_dir="$(
+    mktemp -d --tmpdir="${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}" \
+      'omarchy-close-confirmation.XXXXXX'
+  )"
+  response_fifo="$request_dir/response"
+  mkfifo -- "$response_fifo"
+  exec {response_fd}<>"$response_fifo"
+
+  payload="$(
+    jq -cn \
+      --arg responseFifo "$response_fifo" \
+      --arg windowTitle "$window_title" \
+      '{responseFifo: $responseFifo, windowTitle: $windowTitle}'
+  )"
+
+  summon_result="$(
+    "$omarchy_shell_bin" shell summon "$plugin_id" "$payload" 2>/dev/null
+  )" || {
+    exec {response_fd}>&-
+    return 2
+  }
+  if [[ "$summon_result" != ok ]]; then
+    exec {response_fd}>&-
+    return 2
+  fi
+
+  response=""
+  IFS= read -r response <&"$response_fd" || true
+  exec {response_fd}>&-
+
+  if [[ "$response" == close ]]; then
+    return 0
+  fi
+  return 1
+}
+
 active_window="$(hyprctl activewindow -j)"
 window_class="$(jq -r '.class // ""' <<<"$active_window")"
 window_address="$(jq -r '.address // ""' <<<"$active_window")"
@@ -10,18 +73,27 @@ if [[ -z "$window_address" ]]; then
   exit 0
 fi
 
-if [[ "${window_class,,}" == *chrome* ]]; then
+if [[ "${window_class,,}" == *chrome* || "${window_class,,}" == *chromium* ]]; then
   window_title="$(jq -r '.title // "Chrome"' <<<"$active_window")"
 
-  zenity \
-    --question \
-    --title="Close Chrome?" \
-    --text="Close this Chrome window?\n\n${window_title}" \
-    --ok-label="Close" \
-    --cancel-label="Keep Open" \
-    --default-cancel \
-    --width=420 ||
-    exit 0
+  if confirm_with_overlay "$window_title"; then
+    :
+  else
+    overlay_result=$?
+    if [[ "$overlay_result" -eq 1 ]]; then
+      exit 0
+    fi
+
+    zenity \
+      --question \
+      --title="Close Chrome?" \
+      --text="Close this Chrome window?\n\n${window_title}" \
+      --ok-label="Close" \
+      --cancel-label="Keep Open" \
+      --default-cancel \
+      --width=420 ||
+      exit 0
+  fi
 fi
 
 hyprctl dispatch "hl.dsp.window.close()"

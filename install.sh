@@ -7,15 +7,27 @@ readonly bindings_file="${OMARCHY_BINDINGS_FILE:-${XDG_CONFIG_HOME:-$HOME/.confi
 readonly bin_dir="${OMARCHY_BIN_DIR:-$HOME/.local/bin}"
 readonly helper_file="$bin_dir/omarchy-close-window"
 readonly hyprctl_bin="${HYPRCTL_BIN:-hyprctl}"
+readonly omarchy_shell_bin="${OMARCHY_SHELL_BIN:-omarchy-shell}"
+readonly plugin_id="k-kit.chrome-close-confirmation"
 readonly marker_start="-- omarchy-chrome-close-confirmation:start"
 readonly marker_end="-- omarchy-chrome-close-confirmation:end"
 
-for command in jq zenity "$hyprctl_bin"; do
+for command in jq zenity "$hyprctl_bin" "$omarchy_shell_bin"; do
   if ! command -v "$command" >/dev/null 2>&1; then
     printf 'Missing required command: %s\n' "$command" >&2
     exit 1
   fi
 done
+
+plugin_status="$(
+  "$omarchy_shell_bin" shell call "$plugin_id" ping "" 2>/dev/null || true
+)"
+if [[ "$plugin_status" != ready ]]; then
+  printf 'The Omarchy overlay plugin is not enabled or loaded: %s\n' \
+    "$plugin_id" >&2
+  printf 'Install it first with: omarchy plugin add <repository-url> --enable\n' >&2
+  exit 1
+fi
 
 mkdir -p -- "$(dirname -- "$bindings_file")" "$bin_dir"
 
@@ -74,4 +86,5 @@ install -m 0755 -- "$project_dir/bin/omarchy-close-window" "$helper_file"
 
 printf 'Installed Chrome close confirmation.\n'
 printf 'Binding: SUPER + W\n'
+printf 'Overlay: %s\n' "$plugin_id"
 printf 'Backup: %s\n' "$backup_file"
