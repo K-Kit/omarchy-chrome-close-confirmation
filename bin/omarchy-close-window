@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+active_window="$(hyprctl activewindow -j)"
+window_class="$(jq -r '.class // ""' <<<"$active_window")"
+window_address="$(jq -r '.address // ""' <<<"$active_window")"
+
+if [[ -z "$window_address" ]]; then
+  exit 0
+fi
+
+if [[ "${window_class,,}" == *chrome* ]]; then
+  window_title="$(jq -r '.title // "Chrome"' <<<"$active_window")"
+
+  zenity \
+    --question \
+    --title="Close Chrome?" \
+    --text="Close this Chrome window?\n\n${window_title}" \
+    --ok-label="Close" \
+    --cancel-label="Keep Open" \
+    --default-cancel \
+    --width=420 ||
+    exit 0
+fi
+
+hyprctl dispatch "hl.dsp.window.close()"
