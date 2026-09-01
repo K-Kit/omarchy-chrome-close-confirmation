@@ -4,6 +4,13 @@ Add a confirmation dialog before `SUPER + W` closes Google Chrome on
 [Omarchy](https://omarchy.org/). Every other application keeps the normal,
 instant close behavior.
 
+## Motivation
+
+I built this after switching from macOS to Omarchy. My muscle memory kept
+treating `SUPER + W` like `Command + W`, so I would accidentally close an
+entire Chrome window when I only meant to close a tab. This confirmation adds
+one deliberate checkpoint before a whole window—and all of its tabs—disappears.
+
 > [!NOTE]
 > This is a user-level Hyprland customization, not an Omarchy Shell widget.
 > Window closing is handled by Hyprland, so the repository installs a small
