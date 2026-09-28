@@ -73,7 +73,9 @@ if [[ -z "$window_address" ]]; then
   exit 0
 fi
 
-if [[ "${window_class,,}" == *chrome* || "${window_class,,}" == *chromium* ]]; then
+# Match the browser only. Web apps and PWAs (omarchy-launch-webapp, --app=)
+# get classes like "chrome-app.zoom.us__-Default" and should close instantly.
+if [[ "${window_class,,}" =~ ^(google-chrome(-beta|-unstable|-canary)?|chromium(-browser)?)$ ]]; then
   window_title="$(jq -r '.title // "Chrome"' <<<"$active_window")"
 
   if confirm_with_overlay "$window_title"; then
@@ -96,4 +98,5 @@ if [[ "${window_class,,}" == *chrome* || "${window_class,,}" == *chromium* ]]; t
   fi
 fi
 
-hyprctl dispatch "hl.dsp.window.close()"
+# Close by address: focus can move while the overlay is open.
+hyprctl dispatch "hl.dsp.window.close({ window = \"address:${window_address}\" })"
