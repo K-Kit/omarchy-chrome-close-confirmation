@@ -69,7 +69,7 @@ Press `SUPER + W` as usual.
 | Focused window | Result |
 | --- | --- |
 | Google Chrome or Chromium | Choose **Close** or **Keep Open** |
-| Any other application | Window closes immediately |
+| Any other application, including Chrome web apps | Window closes immediately |
 
 The confirmation includes the active window title so you can identify the
 Chrome window before closing it.
@@ -122,8 +122,11 @@ the helper uses Zenity instead:
 zenity --version
 ```
 
-The helper matches any focused window class containing `chrome`,
-case-insensitively. Inspect the focused window class with:
+The helper matches the browser window classes `google-chrome` (plus
+`-beta`, `-unstable`, `-canary`) and `chromium` (or `chromium-browser`),
+case-insensitively. Web apps and PWAs such as those launched by
+`omarchy-launch-webapp` (classes like `chrome-app.zoom.us__-Default`) close
+immediately. Inspect the focused window class with:
 
 ```bash
 hyprctl activewindow -j | jq -r .class

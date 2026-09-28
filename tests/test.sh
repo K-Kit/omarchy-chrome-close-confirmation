@@ -140,6 +140,14 @@ test "$(bash "$project_dir/bin/omarchy-close-window")" = \
   'dispatch:dispatch hl.dsp.window.close()'
 test "$(wc -l <"$ZENITY_CALLS_FILE")" -eq 2
 
+for web_app_class in chrome-app.zoom.us__-Default chrome-mail.google.com__-Default; do
+  TEST_WINDOW="{\"class\":\"$web_app_class\",\"address\":\"0xdef\",\"title\":\"Web App\"}"
+  export TEST_WINDOW
+  test "$(bash "$project_dir/bin/omarchy-close-window")" = \
+    'dispatch:dispatch hl.dsp.window.close()'
+  test "$(wc -l <"$ZENITY_CALLS_FILE")" -eq 2
+done
+
 TEST_WINDOW='{"class":"Google-chrome","address":"","title":"No Window"}'
 export TEST_WINDOW
 test -z "$(bash "$project_dir/bin/omarchy-close-window")"
