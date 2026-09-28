@@ -113,7 +113,7 @@ jq -e '
 PLUGIN_RESPONSE=close
 export PLUGIN_RESPONSE
 test "$(bash "$project_dir/bin/omarchy-close-window")" = \
-  'dispatch:dispatch hl.dsp.window.close()'
+  'dispatch:dispatch hl.dsp.window.close({ window = "address:0xabc" })'
 test ! -e "$ZENITY_CALLS_FILE"
 
 TEST_WINDOW='{"class":"Chromium","address":"0xabc","title":"Test Chromium"}'
@@ -131,20 +131,20 @@ test "$(wc -l <"$ZENITY_CALLS_FILE")" -eq 1
 ZENITY_RESULT=0
 export ZENITY_RESULT
 test "$(bash "$project_dir/bin/omarchy-close-window")" = \
-  'dispatch:dispatch hl.dsp.window.close()'
+  'dispatch:dispatch hl.dsp.window.close({ window = "address:0xabc" })'
 test "$(wc -l <"$ZENITY_CALLS_FILE")" -eq 2
 
 TEST_WINDOW='{"class":"com.mitchellh.ghostty","address":"0xdef","title":"Terminal"}'
 export TEST_WINDOW
 test "$(bash "$project_dir/bin/omarchy-close-window")" = \
-  'dispatch:dispatch hl.dsp.window.close()'
+  'dispatch:dispatch hl.dsp.window.close({ window = "address:0xdef" })'
 test "$(wc -l <"$ZENITY_CALLS_FILE")" -eq 2
 
 for web_app_class in chrome-app.zoom.us__-Default chrome-mail.google.com__-Default; do
   TEST_WINDOW="{\"class\":\"$web_app_class\",\"address\":\"0xdef\",\"title\":\"Web App\"}"
   export TEST_WINDOW
   test "$(bash "$project_dir/bin/omarchy-close-window")" = \
-    'dispatch:dispatch hl.dsp.window.close()'
+    'dispatch:dispatch hl.dsp.window.close({ window = "address:0xdef" })'
   test "$(wc -l <"$ZENITY_CALLS_FILE")" -eq 2
 done
 

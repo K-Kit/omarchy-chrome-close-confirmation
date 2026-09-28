@@ -98,4 +98,5 @@ if [[ "${window_class,,}" =~ ^(google-chrome(-beta|-unstable|-canary)?|chromium(
   fi
 fi
 
-hyprctl dispatch "hl.dsp.window.close()"
+# Close by address: focus can move while the overlay is open.
+hyprctl dispatch "hl.dsp.window.close({ window = \"address:${window_address}\" })"
